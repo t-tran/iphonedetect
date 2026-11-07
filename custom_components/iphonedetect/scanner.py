@@ -122,7 +122,9 @@ class ScannerArp:
 
 async def async_update_devices(hass: HomeAssistant, scanner: Scanner, devices: dict[str, DeviceData]) -> None:
     """Update reachability for all tracked devices."""
-    ip_addresses = [device.ip_address for device in devices.values()]
+    ip_addresses = []
+    for device in devices.values():
+        ip_addresses.extend(device.ip_address.split(","))
 
     # Ping devices
     _LOGGER.debug("Pinging devices: %s", ip_addresses)
@@ -139,9 +141,10 @@ async def async_update_devices(hass: HomeAssistant, scanner: Scanner, devices: d
 
     # Update reachable devices
     for device in devices.values():
-        device._reachable = device.ip_address in reachable_ip
-        if device._reachable:
-            device._last_seen = dt_util.utcnow()
+        for d_ip in device.ip_address.split(","):
+            device._reachable = d_ip in reachable_ip
+            if device._reachable:
+                device._last_seen = dt_util.utcnow()
 
 
 async def async_get_scanner(hass: HomeAssistant) -> Scanner:
