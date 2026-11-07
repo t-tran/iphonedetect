@@ -66,7 +66,7 @@ async def async_get_networks(hass: HomeAssistant) -> list[IPv4Network]:
 async def _validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> dict[str, str] | None:
     """Try to validate user input"""
     entries = [entry for entry in hass.config_entries.async_entries(DOMAIN)]
-    ip = user_input[CONF_IP_ADDRESS]
+    ips = user_input[CONF_IP_ADDRESS].split(",")
 
     # Check if name already used for a clearer error
     if user_input.get(CONF_NAME, False):
@@ -75,22 +75,23 @@ async def _validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> di
         if entry_id in entries_id:
             return {"base": "name_not_unique"}
 
-    # Check if valid IP address
-    try:
-        IPv4Address(ip)
-    except AddressValueError:
-        return {"base": "ip_invalid"}
+    for ip in ips:
+        # Check if valid IP address
+        try:
+            IPv4Address(ip)
+        except AddressValueError:
+            return {"base": "ip_invalid"}
 
-    # Check if IP address already used for a clearer error
-    entries_ip = [entry.options[CONF_IP_ADDRESS] for entry in entries]
-    if ip in entries_ip:
-        return {"base": "ip_already_configured"}
+        # Check if IP address already used for a clearer error
+        entries_ip = [entry.options[CONF_IP_ADDRESS] for entry in entries]
+        if ip in entries_ip:
+            return {"base": "ip_already_configured"}
 
-    # Check if device IP will be seen by ARP
-    if user_input["subnet_check"]:
-        subnets = await async_get_networks(hass)
-        if not any(IPv4Address(ip) in subnet for subnet in subnets):
-            return {"base": "ip_range"}
+        # Check if device IP will be seen by ARP
+        if user_input["subnet_check"]:
+            subnets = await async_get_networks(hass)
+            if not any(IPv4Address(ip) in subnet for subnet in subnets):
+                return {"base": "ip_range"}
 
 
 class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):  # type: ignore
